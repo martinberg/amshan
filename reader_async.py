@@ -7,6 +7,7 @@ import json
 import logging
 import signal
 import sys
+from influxdb import InfluxDBClient
 from asyncio import Queue, create_task, get_event_loop, run
 from typing import Any
 
@@ -97,9 +98,46 @@ def _measure_received(frame: bytes) -> None:
     decoded_frame = _decoder.decode_message_payload(frame)
     if decoded_frame:
         json_frame = json.dumps(decoded_frame, default=_json_converter)
+        send_frame_to_inflxudb(decoded_frame)
         LOG.debug("Decoded frame: %s", json_frame)
     else:
         LOG.error("Could not decode frame content: %s", frame.hex())
+
+
+def send_frame_to_inflxudb(decoded_frame, hostname='localhost', database='elmatare', port='8086'):
+    measurement_list = []
+    ignore_fields = ["meter_datetime", "meter_id", "meter_type", "meter_manufacturer", "list_ver_id"]
+    regular_fields = ["active_power_import", "active_power_export", "reactive_power_import", "reactive_power_export",
+                      "current_l1", "current_l2", "current_l3", "voltage_l1", "voltage_l2", "voltage_l3"]
+    hourly_fields = ["active_power_import_total", "active_power_export_total", "reactive_power_import_total",
+                     "reactive_power_export_total"]
+
+    for key in decoded_frame:
+        if key in ignore_fields:
+            continue
+        if key in regular_fields or key in hourly_fields:
+            measurement_dick = {
+                "measurement": "elmatare",
+                "tags": {
+                    "meter_id": str(decoded_frame["meter_id"]),
+                    "meter_type": str(decoded_frame["meter_type"]),
+                    "meter_manufacturer": str(decoded_frame["meter_manufacturer"]),
+                    "list_ver_id": str(decoded_frame["list_ver_id"]),
+                    "measurement": str(key)
+                },
+                "time": decoded_frame["meter_datetime"],
+                #"time": datetime.datetime.utcnow().isoformat(),
+                "fields": {
+                    "value": float(decoded_frame[key])
+                }
+            }
+
+            measurement_list.append(measurement_dick)
+
+    client = InfluxDBClient(host=hostname, port=port)
+    client.write_points(measurement_list, database=database)
+
+    client.close()
 
 
 async def _process_frames(queue: "Queue[bytes]") -> None:
