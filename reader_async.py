@@ -104,7 +104,7 @@ def _measure_received(frame: bytes) -> None:
         LOG.error("Could not decode frame content: %s", frame.hex())
 
 
-def send_frame_to_inflxudb(decoded_frame, hostname='localhost', database='elmatare', port='8086'):
+def send_frame_to_inflxudb(decoded_frame, hostname='localhost', database='elmatare', port='8086', username='username', password='password'):
     measurement_list = []
     ignore_fields = ["meter_datetime", "meter_id", "meter_type", "meter_manufacturer", "list_ver_id"]
     regular_fields = ["active_power_import", "active_power_export", "reactive_power_import", "reactive_power_export",
@@ -125,8 +125,8 @@ def send_frame_to_inflxudb(decoded_frame, hostname='localhost', database='elmata
                     "list_ver_id": str(decoded_frame["list_ver_id"]),
                     "measurement": str(key)
                 },
-                "time": decoded_frame["meter_datetime"],
-                #"time": datetime.datetime.utcnow().isoformat(),
+                #"time": decoded_frame["meter_datetime"],
+                "time": datetime.datetime.utcnow().isoformat(),
                 "fields": {
                     "value": float(decoded_frame[key])
                 }
@@ -134,7 +134,7 @@ def send_frame_to_inflxudb(decoded_frame, hostname='localhost', database='elmata
 
             measurement_list.append(measurement_dick)
 
-    client = InfluxDBClient(host=hostname, port=port)
+    client = InfluxDBClient(host=hostname, port=port, username=username, password=password)
     client.write_points(measurement_list, database=database)
 
     client.close()
