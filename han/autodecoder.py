@@ -19,10 +19,13 @@ class AutoDecoder:
     """
 
     payload_decoder_functions = [
-        ("Aidon", aidon.decode_frame_content),
-        ("Kaifa", kaifa.decode_frame_content),
-        ("Kamstrup", kamstrup.decode_frame_content),
+        ("Aidon_frame", aidon.decode_frame_content),
+        ("Kaifa_frame", kaifa.decode_frame_content),
+        ("Kamstrup_frame", kamstrup.decode_frame_content),
         ("P1", dlde.decode_p1_readout_content),
+        ("Aidon_notification_body", aidon.decode_notification_body),
+        ("Kaifa_notification_body", kaifa.decode_notification_body),
+        ("Kamstrup_notification_body", kamstrup.decode_notification_body),
     ]
 
     def __init__(self) -> None:
@@ -88,7 +91,6 @@ class AutoDecoder:
             )
             name, decoder = AutoDecoder.payload_decoder_functions[index]
             try:
-
                 decoded = (
                     dlde.decode_p1_readout(cast(dlde.DataReadout, message))
                     if name == "P1" and isinstance(message, dlde.DataReadout)
